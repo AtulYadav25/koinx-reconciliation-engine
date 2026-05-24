@@ -128,3 +128,50 @@ export const getReportSummary = async (req: Request, res: Response): Promise<voi
         });
     }
 };
+
+
+/**
+ * GET /report/:runId/unmatched
+ * Fetch only unmatched rows (both user-only and exchange-only) with reasons.
+ */
+export const getUnmatched = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const runId = req.params.runId as string;
+
+        if (!runId || !mongoose.Types.ObjectId.isValid(runId)) {
+            res.status(400).json({ success: false, message: 'Invalid runId format' });
+            return;
+        }
+
+        const run = await ReconciliationRun.findById(runId);
+        if (!run) {
+            res.status(404).json({ success: false, message: 'Reconciliation run not found' });
+            return;
+        }
+
+        const entries = await ReconciliationReport.find({
+            runId: run._id,
+            category: { $in: ['Unmatched-User', 'Unmatched-Exchange'] },
+        })
+            .sort({ category: 1 })
+            .lean();
+
+        res.status(200).json({
+            success: true,
+            data: {
+                runId: run._id,
+                totalUnmatched: entries.length,
+                unmatchedUser: entries.filter((e) => e.category === 'Unmatched-User').length,
+                unmatchedExchange: entries.filter((e) => e.category === 'Unmatched-Exchange').length,
+                entries,
+            },
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch unmatched:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch unmatched entries',
+            error: (error as Error).message,
+        });
+    }
+};

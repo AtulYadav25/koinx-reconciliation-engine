@@ -2,6 +2,7 @@ import express from 'express';
 import {
     getFullReport,
     getReportSummary,
+    getUnmatched,
     triggerReconciliation,
 } from '../controllers/reconcile.controller';
 
@@ -15,5 +16,8 @@ router.get("/report/:runId", getFullReport);
 
 // GET /api/v1/reconcile/report/:runId/summary — Summary counts only
 router.get("/report/:runId/summary", getReportSummary);
+
+// GET /api/v1/reconcile/report/:runId/unmatched — Unmatched rows only
+router.get("/report/:runId/unmatched", getUnmatched);
 
 export default router;
