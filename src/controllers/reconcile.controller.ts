@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { runReconciliation } from "../services/reconcile.service";
+import { ReconciliationRun } from "../models/ReconciliationRun.model";
+import { ReconciliationReport } from "../models/ReconciliationReportSchema.model";
 
 /**
  * POST /reconcile
@@ -40,6 +43,87 @@ export const triggerReconciliation = async (req: Request, res: Response): Promis
         res.status(500).json({
             success: false,
             message: 'Reconciliation failed',
+            error: (error as Error).message,
+        });
+    }
+};
+
+/**
+ * GET /report/:runId
+ * Fetch the full reconciliation report for a given run.
+ */
+export const getFullReport = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const runId = req.params.runId as string;
+
+        if (!runId || !mongoose.Types.ObjectId.isValid(runId)) {
+            res.status(400).json({ success: false, message: 'Invalid runId format' });
+            return;
+        }
+
+        const run = await ReconciliationRun.findById(runId);
+        if (!run) {
+            res.status(404).json({ success: false, message: 'Reconciliation run not found' });
+            return;
+        }
+
+        const entries = await ReconciliationReport.find({ runId: run._id })
+            .sort({ category: 1 })
+            .lean();
+
+        res.status(200).json({
+            success: true,
+            data: {
+                runId: run._id,
+                status: run.status,
+                config: run.config,
+                summary: run.summary,
+                totalEntries: entries.length,
+                entries,
+            },
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch report:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch report',
+            error: (error as Error).message,
+        });
+    }
+};
+
+/**
+ * GET /report/:runId/summary
+ * Fetch just the summary counts for a given run.
+ */
+export const getReportSummary = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const runId = req.params.runId as string;
+
+        if (!runId || !mongoose.Types.ObjectId.isValid(runId)) {
+            res.status(400).json({ success: false, message: 'Invalid runId format' });
+            return;
+        }
+
+        const run = await ReconciliationRun.findById(runId);
+        if (!run) {
+            res.status(404).json({ success: false, message: 'Reconciliation run not found' });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                runId: run._id,
+                status: run.status,
+                summary: run.summary,
+            },
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch summary:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch summary',
             error: (error as Error).message,
         });
     }

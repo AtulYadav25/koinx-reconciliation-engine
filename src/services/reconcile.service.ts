@@ -194,6 +194,7 @@ async function matchTransactions(
             if (i < 0 || i >= bucket.length) continue;
 
             const entry = bucket[i];
+            if (matchedUserIndices.has(entry.uIdx)) continue;
 
             const timeDiffSec = Math.abs(entry.timestamp - eTimestamp) / 1000;
             if (timeDiffSec > timestampToleranceSeconds * 2) continue; // skip obviously out-of-range
