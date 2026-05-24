@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { runReconciliation } from "../services/reconcile.service";
 import { ReconciliationRun } from "../models/ReconciliationRun.model";
 import { ReconciliationReport } from "../models/ReconciliationReportSchema.model";
+import { flattenTx, toCsv } from "../utils/csvHelper.util";
 
 /**
  * POST /reconcile
@@ -171,6 +172,59 @@ export const getUnmatched = async (req: Request, res: Response): Promise<void> =
         res.status(500).json({
             success: false,
             message: 'Failed to fetch unmatched entries',
+            error: (error as Error).message,
+        });
+    }
+};
+
+
+/**
+ * GET /report/:runId/csv
+ * Download the full reconciliation report as a CSV file.
+ *
+ * Columns:
+ *   category, reason,
+ *   user_transaction_id … user_qualityIssues,
+ *   exchange_transaction_id … exchange_qualityIssues
+ */
+export const downloadReportCsv = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const runId = req.params.runId as string;
+
+        if (!runId || !mongoose.Types.ObjectId.isValid(runId)) {
+            res.status(400).json({ success: false, message: 'Invalid runId format' });
+            return;
+        }
+
+        const run = await ReconciliationRun.findById(runId);
+        if (!run) {
+            res.status(404).json({ success: false, message: 'Reconciliation run not found' });
+            return;
+        }
+
+        const entries = await ReconciliationReport.find({ runId: run._id })
+            .sort({ category: 1 })
+            .lean();
+
+        // Build flat row objects suitable for CSV serialization
+        const rows = entries.map((entry) => ({
+            category: entry.category,
+            reason: entry.reason,
+            ...flattenTx(entry.userTransaction as Record<string, unknown> | null, 'user_'),
+            ...flattenTx(entry.exchangeTransaction as Record<string, unknown> | null, 'exchange_'),
+        }));
+
+        const csv = toCsv(rows);
+
+        const filename = `reconciliation_report_${runId}.csv`;
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.status(200).send(csv);
+    } catch (error) {
+        console.error('❌ Failed to generate CSV report:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate CSV report',
             error: (error as Error).message,
         });
     }
