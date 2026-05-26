@@ -16,36 +16,36 @@ export const errorResponse = <T>(res: Response, statusCode: number = 500, messag
         error,
     });
 };
-
 /**
  * Standard pagination response formatter
- * @param {Object} reply - Fastify reply object
- * @param {Array} data - Array of results
- * @param {Number} page - Current page number
- * @param {Number} limit - Records per page
- * @param {String} message - Success message
- * @param {Number} statusCode - HTTP status code (default 200)
+ * @param res - Express response object
+ * @param statusCode - HTTP status code (default 200)
+ * @param message - Success message
+ * @param data - Non-paginated metadata/context object
+ * @param entries - Paginated array of results
+ * @param page - Current page number
+ * @param limit - Records per page
  */
-
-export const paginationResponse = <T>(
+export const paginationResponse = <T, E>(
     res: Response,
     statusCode = 200,
     message: string,
-    data: T[],
+    data: T,
+    entries: E[],
     page: number,
     limit: number
 ) => {
-
     return res
         .status(statusCode)
         .send({
             success: true,
             message,
-            data: data as T,
+            data,
+            entries,
             meta: {
                 page,
                 limit,
-                hasNextPage: data.length === limit,
+                hasNextPage: entries.length === limit,
                 hasPrevPage: page > 1,
             },
         });

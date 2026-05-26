@@ -4,7 +4,7 @@ import { runReconciliation } from "../services/reconcile.service";
 import { ReconciliationRun } from "../models/ReconciliationRun.model";
 import { ReconciliationReport } from "../models/ReconciliationReportSchema.model";
 import { flattenTx, toCsv } from "../utils/csvHelper.util";
-import { errorResponse, successResponse } from "../utils/responseHandler.util";
+import { errorResponse, paginationResponse, successResponse } from "../utils/responseHandler.util";
 
 /**
  * POST /reconcile
@@ -59,6 +59,7 @@ export const triggerReconciliation = async (req: Request, res: Response) => {
 export const getFullReport = async (req: Request, res: Response) => {
     try {
         const runId = req.params.runId as string;
+        const { page = 1, limit = 10 } = req.query as unknown as { page: number; limit: number };
 
         if (!runId || !mongoose.Types.ObjectId.isValid(runId)) {
             return errorResponse(res, 400, 'Invalid runId format');
@@ -71,17 +72,25 @@ export const getFullReport = async (req: Request, res: Response) => {
 
         const entries = await ReconciliationReport.find({ runId: run._id })
             .sort({ category: 1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
             .lean();
 
-        return successResponse(res, 200, 'Report fetched successfully', {
-            runId: run._id,
-            status: run.status,
-            config: run.config,
-            summary: run.summary,
-            totalEntries: entries.length,
+        return paginationResponse(
+            res,
+            200,
+            'Report fetched successfully',
+            {
+                runId: run._id,
+                status: run.status,
+                config: run.config,
+                summary: run.summary,
+            },
             entries,
-        },
+            page,
+            limit
         );
+
     } catch (error) {
         console.error('❌ Failed to fetch report:', error);
         return errorResponse(
