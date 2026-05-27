@@ -2,11 +2,12 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import reconcileRoutes from "./routes/reconcile.routes";
+import { connectDB } from "./config/db";
 
 const app = express();
 
 // Trust reverse proxy - For Vercel
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 /** Global limiter – applied to every route */
 const globalLimiter = rateLimit({
@@ -34,6 +35,13 @@ const apiLimiter = rateLimit({
 app.use(globalLimiter);
 app.use(cors());
 app.use(express.json());
+
+//Using middleware to connect to DB because vercel is failing to connect
+app.use(async (req, res, next) => {
+    await connectDB();
+    next();
+});
+
 
 app.get("/", (req, res) => {
     res.send("KoinX Reconciliation Engine API 🚀");
