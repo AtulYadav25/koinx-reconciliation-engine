@@ -20,9 +20,6 @@ const envSchema = z.object({
 
 const _env = envSchema.safeParse(process.env);
 
-console.log("MONGO_URI exists:", !!process.env.MONGO_URI);
-console.log(_env.data);
-
 if (!_env.success) {
     console.error("Invalid environment variables:", _env.error.format());
     process.exit(1);

@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import reconcileRoutes from "./routes/reconcile.routes";
+import { connectDB } from "./config/db";
+
+connectDB();
 
 const app = express();
 
