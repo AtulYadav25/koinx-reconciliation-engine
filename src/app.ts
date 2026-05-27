@@ -4,7 +4,6 @@ import rateLimit from "express-rate-limit";
 import reconcileRoutes from "./routes/reconcile.routes";
 import { connectDB } from "./config/db";
 
-connectDB();
 
 const app = express();
 
@@ -32,6 +31,12 @@ const apiLimiter = rateLimit({
         status: 429,
         error: "Too many reconcile requests. Please slow down.",
     },
+});
+
+//Using middleware to connect to DB because vercel is failing to connect
+app.use(async (req, res, next) => {
+    await connectDB();
+    next();
 });
 
 app.use(globalLimiter);
