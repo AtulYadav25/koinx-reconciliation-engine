@@ -6,7 +6,7 @@ import reconcileRoutes from "./routes/reconcile.routes";
 const app = express();
 
 // Trust reverse proxy - For Vercel
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 /** Global limiter – applied to every route */
 const globalLimiter = rateLimit({
